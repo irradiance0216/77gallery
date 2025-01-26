@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Floating Images</title>
+    <style>
+        body {
+            background-color: #f0f0f0; /* Light background */
+            overflow: hidden; /* Hide scrollbars */
+        }
+        .container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .floating-image {
+            position: absolute;
+            opacity: 0; /* Initially hidden */
+            animation: floatAnimation 10s linear infinite, fadeInOut 2s linear infinite alternate; /* Combined animations */
+            width: 150px; /* Adjust size as needed */
+            height: auto;
+            border-radius: 10px; /* Rounded corners */
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+        }
+
+        @keyframes floatAnimation {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(20px, -10px); } /* Example movement */
+            50% { transform: translate(0, 20px); }
+            75% { transform: translate(-10px, 5px); }
+            100% { transform: translate(0, 0); }
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container" id="imageContainer">
+    </div>
+
+<script>
+        const imageContainer = document.getElementById('imageContainer');
+        const numImages = 100; // Total number of images
+        const imagesToShow = 4; // Number of images to show simultaneously
+        const imagePaths = [];
+        for (let i = 1; i <= numImages; i++) {
+            imagePaths.push(`images/image${i}.jpg`); // Replace with your image paths
+        }
+
+        function createFloatingImage(imagePath) {
+            const img = document.createElement('img');
+            img.src = imagePath;
+            img.classList.add('floating-image');
+
+            // Random positioning
+            img.style.left = Math.random() * (window.innerWidth - 150) + 'px';
+            img.style.top = Math.random() * (window.innerHeight - 150) + 'px';
+
+            // Random animation delay to stagger appearance
+            img.style.animationDelay = Math.random() * 5 + 's';
+
+            return img;
+        }
+
+        function displayRandomImages() {
+            // Clear existing images
+            imageContainer.innerHTML = '';
+
+            const selectedImages = [];
+            const shuffledImagePaths = [...imagePaths].sort(() => 0.5 - Math.random()); // Shuffle image paths
+            for(let i=0; i<imagesToShow; i++){
+                selectedImages.push(shuffledImagePaths[i]);
+            }
+
+
+            selectedImages.forEach(imagePath => {
+                const floatingImage = createFloatingImage(imagePath);
+                imageContainer.appendChild(floatingImage);
+            });
+        }
+
+        // Initial display
+        displayRandomImages();
+
+        // Change images every 5 seconds
+        setInterval(displayRandomImages, 5000);
+
+    </script>
+
+</body>
+</html>
