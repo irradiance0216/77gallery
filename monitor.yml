@@ -1,0 +1,17 @@
+name: Toyoko Inn Scheduled Room Monitor
+
+on:
+  schedule:
+    # Runs every 10 minutes (UTC)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  check-rooms:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Netlify Monitor Function
+        run: |
+          # Replace YOUR-NETLIFY-SITE.netlify.app with your actual Netlify site domain
+          # Add parameters for the hotel ID, dates, and target email
+          curl -s "https://YOUR-NETLIFY-SITE.netlify.app/.netlify/functions/check-availability?hotel=00042&start=2026-10-15&end=2026-10-16&recipientEmail=your-email@example.com"
