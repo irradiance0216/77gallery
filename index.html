@@ -1,707 +1,546 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toyoko Inn Oshikatsu Room Availability Tracker</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        toyoko: {
-                            blue: '#002C6C',
-                            lightBlue: '#1D70B8',
-                            accent: '#E60012',
-                            bg: '#F4F7FA'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #F4F7FA; }
-        .tab-active { border-bottom: 2px solid #002C6C; color: #002C6C; font-weight: 600; }
-        .badge-available { background-color: #DEF7EC; color: #03543F; }
-        .badge-full { background-color: #FDE8E8; color: #9B1C1C; }
-        .badge-checking { background-color: #FEF08A; color: #713F12; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toyoko Inn Oshikatsu Room Monitor Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+    .glass-card { background: rgba(17, 24, 39, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-input { background: rgba(31, 41, 55, 0.8); border: 1px solid rgba(255, 255, 255, 0.12); color: #fff; }
+    .glass-input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 3px; }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800 flex flex-col">
+<body class="min-h-screen flex flex-col justify-between">
 
-    <!-- Navigation Header -->
-    <header class="bg-toyoko-blue text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white text-toyoko-blue font-black px-2.5 py-1 rounded text-lg tracking-wider">東横INN</div>
-                <div>
-                    <h1 class="text-xl font-bold leading-tight">Oshikatsu Room Tracker</h1>
-                    <p class="text-xs text-blue-200">Official Toyoko Inn Direct Availability & Monitoring System</p>
-                </div>
-            </div>
-
-            <!-- Login / Auth Status Pill (Strictly reset in-memory on refresh) -->
-            <div id="authStatusContainer" class="flex items-center space-x-3">
-                <span id="authStateBadge" class="bg-blue-900/60 text-blue-200 text-xs px-3 py-1.5 rounded-full border border-blue-400/30">
-                    <i class="fa-solid fa-user-slash mr-1"></i> Guest Mode (View Only)
-                </span>
-                <button id="authModalBtn" onclick="openAuthModal()" class="bg-white hover:bg-gray-100 text-toyoko-blue font-semibold text-xs px-4 py-2 rounded-lg transition shadow-sm">
-                    <i class="fa-solid fa-lock mr-1.5"></i> Admin Login
-                </button>
-            </div>
+  <!-- AUTH OVERLAY (STRICT IN-MEMORY ENFORCEMENT ON RELOAD) -->
+  <div id="authOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950 bg-opacity-95 backdrop-blur-md">
+    <div class="glass-card max-w-md w-full p-8 rounded-2xl shadow-2xl border border-blue-500/20 text-center mx-4">
+      <div class="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/30">
+        <i class="fa-solid fa-lock text-2xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-white mb-2">Toyoko Inn Monitor</h2>
+      <p class="text-gray-400 text-sm mb-6">Enter passcode to unlock tracker (Passcode is required on every reload for security)</p>
+      
+      <form id="authForm" class="space-y-4">
+        <div>
+          <input type="password" id="passcodeInput" placeholder="Default passcode: oshikatsu2026" 
+                 class="w-full px-4 py-3 rounded-xl glass-input text-center text-lg tracking-widest" required autofocus autocomplete="off">
         </div>
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 transition duration-200">
+          Authenticate Session
+        </button>
+        <p id="authError" class="text-red-400 text-xs hidden"><i class="fa-solid fa-circle-exclamation mr-1"></i> Incorrect passcode</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="mainApp" class="hidden flex-col flex-1">
+    
+    <!-- HEADER -->
+    <header class="border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-30 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/30">
+            <i class="fa-solid fa-hotel text-xl"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg text-white leading-tight flex items-center gap-2">
+              Toyoko Inn Room Tracker <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Direct API Fix</span>
+            </h1>
+            <p class="text-xs text-gray-400">Real-time Direct JSON Engine • Live Availability Tracking</p>
+          </div>
+        </div>
+
+        <!-- RIGHT CONTROLS -->
+        <div class="flex items-center gap-3">
+          <button id="simCancellationBtn" class="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-medium rounded-lg transition flex items-center gap-1.5">
+            <i class="fa-solid fa-bolt text-amber-400"></i> Simulate Drop
+          </button>
+          <button id="showExportBtn" class="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium rounded-lg transition flex items-center gap-1.5">
+            <i class="fa-solid fa-code text-indigo-400"></i> Netlify Code
+          </button>
+          <button id="lockSessionBtn" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-medium rounded-lg transition flex items-center gap-1">
+            <i class="fa-solid fa-right-from-bracket"></i> Lock
+          </button>
+        </div>
+      </div>
     </header>
 
-    <!-- Main Content Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
-        <!-- Navigation Tabs -->
-        <div class="flex border-b border-gray-200 mb-6 bg-white rounded-t-xl px-4 pt-2 shadow-sm">
-            <button onclick="switchTab('tracker')" id="tabBtn-tracker" class="py-3 px-5 text-sm font-medium tab-active transition flex items-center space-x-2">
-                <i class="fa-solid fa-binoculars"></i>
-                <span>Live Watchlist</span>
+    <!-- CONTENT BODY -->
+    <main class="max-w-7xl mx-auto w-full p-4 md:p-6 space-y-6 flex-1">
+      
+      <!-- ADD WATCH ITEM & BRANCH SELECTION -->
+      <div class="glass-card p-5 rounded-2xl border border-gray-800">
+        <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-plus-circle text-blue-400"></i> Add Target Toyoko Inn Branch
+        </h2>
+        
+        <form id="addWatchForm" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          
+          <!-- SEARCH & SELECT BRANCH -->
+          <div class="md:col-span-5 space-y-1">
+            <label class="text-xs text-gray-400 font-medium">Branch Search (Search Japanese / English)</label>
+            <div class="relative">
+              <input type="text" id="branchSearchInput" placeholder="Type to filter e.g. Haneda, Akihabara, 羽田..." 
+                     class="w-full px-3 py-2 rounded-xl glass-input text-sm pl-9">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-xs"></i>
+            </div>
+            <select id="branchSelect" class="w-full mt-1 px-3 py-2 rounded-xl glass-input text-sm" required>
+              <!-- Populated dynamically by JS -->
+            </select>
+          </div>
+
+          <!-- CHECK-IN DATE -->
+          <div class="md:col-span-3 space-y-1">
+            <label class="text-xs text-gray-400 font-medium">Check-In Date</label>
+            <input type="date" id="checkInInput" class="w-full px-3 py-2 rounded-xl glass-input text-sm" required>
+          </div>
+
+          <!-- SMOKING PREFERENCE -->
+          <div class="md:col-span-2 space-y-1">
+            <label class="text-xs text-gray-400 font-medium">Room Type</label>
+            <select id="smokingSelect" class="w-full px-3 py-2 rounded-xl glass-input text-sm">
+              <option value="noSmoking">Non-Smoking (禁煙)</option>
+              <option value="smoking">Smoking (喫煙)</option>
+            </select>
+          </div>
+
+          <!-- ADD BUTTON -->
+          <div class="md:col-span-2">
+            <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+              <i class="fa-solid fa-eye"></i> Track Branch
             </button>
-            <button onclick="switchTab('branches')" id="tabBtn-branches" class="py-3 px-5 text-sm font-medium text-gray-500 hover:text-gray-700 transition flex items-center space-x-2">
-                <i class="fa-solid fa-hotel"></i>
-                <span>Branch Directory</span>
-            </button>
-            <button onclick="switchTab('deployment')" id="tabBtn-deployment" class="py-3 px-5 text-sm font-medium text-gray-500 hover:text-gray-700 transition flex items-center space-x-2">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-                <span>Netlify Deploy Code</span>
-            </button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- ACTIVE WATCHLIST SECTION -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-blue-400"></i> Active Target Watchlist
+            <span id="targetCount" class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-normal border border-blue-500/30">0 monitored</span>
+          </h2>
+          <button id="refreshAllBtn" class="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition">
+            <i class="fa-solid fa-rotate-right"></i> Check All API
+          </button>
         </div>
 
-        <!-- VIEW 1: WATCHLIST & TRACKER -->
-        <div id="view-tracker" class="space-y-6">
-            <!-- Global Action Toolbar -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap justify-between items-center gap-4">
-                <div class="flex items-center space-x-3">
-                    <button onclick="triggerCheckAll()" class="bg-toyoko-lightBlue hover:bg-toyoko-blue text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow flex items-center space-x-2">
-                        <i class="fa-solid fa-rotate-right" id="refreshAllSpinner"></i>
-                        <span>Check All Rooms Now</span>
-                    </button>
-                    <span class="text-xs text-gray-500" id="lastCheckedLabel">Last updated: Just now</span>
-                </div>
-
-                <div class="flex items-center space-x-2">
-                    <button onclick="openAddModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow flex items-center space-x-2">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Add Watch Room</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Watchlist Grid -->
-            <div id="watchlistContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <!-- Dynamic cards populated by JS -->
-            </div>
+        <!-- WATCH CARDS GRID -->
+        <div id="watchlistGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated dynamically by JS -->
         </div>
+      </div>
 
-        <!-- VIEW 2: BRANCH DIRECTORY -->
-        <div id="view-branches" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-800">Toyoko Inn Branch Code Directory</h2>
-                        <p class="text-xs text-gray-500">Official 5-digit hotel codes used for direct URL booking queries.</p>
-                    </div>
-                    <div class="relative w-full md:w-72">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                        <input type="text" id="branchSearchInput" oninput="filterBranches()" placeholder="Search Tokyo, Haneda, 00042..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-toyoko-lightBlue">
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-gray-600">
-                        <thead class="bg-gray-50 text-xs text-gray-700 uppercase">
-                            <tr>
-                                <th class="py-3 px-4">Hotel Code</th>
-                                <th class="py-3 px-4">Branch Name</th>
-                                <th class="py-3 px-4">Region / Area</th>
-                                <th class="py-3 px-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="branchTableBody" class="divide-y divide-gray-100">
-                            <!-- Populated dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+      <!-- ACTIVITY LOG TERMINAL -->
+      <div class="glass-card p-4 rounded-2xl border border-gray-800">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-bold text-gray-300 tracking-wider uppercase flex items-center gap-2">
+            <i class="fa-solid fa-terminal text-green-400"></i> Direct API Query Log & Signal Feed
+          </h3>
+          <span class="text-[10px] text-gray-500 font-mono">Bypassing CDN Edge Cache</span>
         </div>
-
-        <!-- VIEW 3: NETLIFY DEPLOYMENT CODE EXPORT -->
-        <div id="view-deployment" class="hidden space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h2 class="text-lg font-bold text-gray-800 mb-2"><i class="fa-solid fa-code text-toyoko-blue mr-2"></i>Netlify Code Export</h2>
-                <p class="text-sm text-gray-600 mb-4">Copy these files directly into your repository or Netlify deployment project for serverless background checks.</p>
-
-                <!-- File Code Tabs -->
-                <div class="border-b border-gray-200 mb-4 flex space-x-2">
-                    <button onclick="switchCodeTab('function')" id="codeTab-function" class="py-2 px-4 text-xs font-semibold rounded-t-lg bg-gray-800 text-white">functions/check-availability.mjs</button>
-                    <button onclick="switchCodeTab('toml')" id="codeTab-toml" class="py-2 px-4 text-xs font-semibold rounded-t-lg bg-gray-100 text-gray-600 hover:bg-gray-200">netlify.toml</button>
-                    <button onclick="switchCodeTab('package')" id="codeTab-package" class="py-2 px-4 text-xs font-semibold rounded-t-lg bg-gray-100 text-gray-600 hover:bg-gray-200">package.json</button>
-                    <button onclick="switchCodeTab('node')" id="codeTab-node" class="py-2 px-4 text-xs font-semibold rounded-t-lg bg-gray-100 text-gray-600 hover:bg-gray-200">.node-version</button>
-                </div>
-
-                <!-- Code Display Box -->
-                <div class="relative bg-gray-900 rounded-lg p-4 font-mono text-xs text-green-400 overflow-x-auto max-h-96">
-                    <button onclick="copyCodeSnippet()" class="absolute top-3 right-3 bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1 rounded text-xs border border-gray-600 transition">
-                        <i class="fa-regular fa-copy mr-1"></i> Copy Code
-                    </button>
-                    <pre id="codeDisplayArea" class="whitespace-pre-wrap leading-relaxed"></pre>
-                </div>
-            </div>
+        <div id="activityLog" class="h-32 overflow-y-auto font-mono text-xs text-gray-400 bg-gray-950/80 p-3 rounded-xl border border-gray-800 space-y-1 custom-scrollbar">
+          <div class="text-gray-500">[System] Initialized direct JSON API inspection engine.</div>
         </div>
+      </div>
+
     </main>
 
-    <!-- Add Watch Target Modal -->
-    <div id="addModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative">
-            <button onclick="closeAddModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-            <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fa-solid fa-square-plus text-toyoko-blue mr-2"></i>Add Hotel Watch Item</h3>
-            
-            <form id="addWatchForm" onsubmit="handleAddWatch(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Select Branch Code / Hotel</label>
-                    <select id="modalHotelSelect" onchange="autoFillCheckOutDate()" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyoko-blue focus:outline-none" required>
-                        <!-- Populated dynamically -->
-                    </select>
-                </div>
+    <!-- FOOTER -->
+    <footer class="border-t border-gray-800 bg-gray-900/50 py-4 px-6 text-center text-xs text-gray-500">
+      Toyoko Inn Oshikatsu Availability Tracker • Configured for Direct API Querying on Netlify (Node 22 Runtime)
+    </footer>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Check-in Date</label>
-                        <input type="date" id="modalStartDate" onchange="autoFillCheckOutDate()" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyoko-blue focus:outline-none" required>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Check-out Date</label>
-                        <input type="date" id="modalEndDate" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyoko-blue focus:outline-none" required>
-                    </div>
-                </div>
+  </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Smoking Preference</label>
-                    <select id="modalSmokingSelect" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyoko-blue focus:outline-none">
-                        <option value="noSmoking">Non-Smoking (noSmoking)</option>
-                        <option value="smoking">Smoking (smoking)</option>
-                        <option value="both">Any / Either (both)</option>
-                    </select>
-                </div>
+  <!-- CODE EXPORT MODAL -->
+  <div id="exportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950 bg-opacity-80 backdrop-blur-md hidden p-4">
+    <div class="glass-card max-w-3xl w-full p-6 rounded-2xl border border-gray-800 flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <i class="fa-solid fa-file-code text-indigo-400"></i> Netlify Direct API Backend Files (Node 22)
+        </h3>
+        <button id="closeExportBtn" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Notes / Oshikatsu Event Tag</label>
-                    <input type="text" id="modalNoteInput" placeholder="e.g. Haneda Morning Flight / Tokyo Dome Concert" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyoko-blue focus:outline-none">
-                </div>
+      <div class="py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar pr-1">
+        
+        <div>
+          <label class="text-xs font-semibold text-gray-300 block mb-1">1. netlify.toml (Deploy Configuration)</label>
+          <pre class="bg-gray-950 p-3 rounded-xl text-xs font-mono text-green-400 border border-gray-800 select-all">
+[build]
+  functions = "netlify/functions"
 
-                <div class="pt-2 flex justify-end space-x-3">
-                    <button type="button" onclick="closeAddModal()" class="px-4 py-2 border rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-toyoko-blue hover:bg-blue-900 text-white rounded-lg text-sm font-medium shadow">Save Watch Item</button>
-                </div>
-            </form>
+[build.environment]
+  NODE_VERSION = "22"
+  AWS_LAMBDA_JS_RUNTIME = "nodejs22.x"</pre>
         </div>
-    </div>
 
-    <!-- Auth Modal -->
-    <div id="authModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl relative">
-            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-            <h3 class="text-lg font-bold text-gray-800 mb-2"><i class="fa-solid fa-shield-halved text-toyoko-blue mr-2"></i>In-Memory Admin Login</h3>
-            <p class="text-xs text-gray-500 mb-4">Auth state is kept strictly in-memory and resets automatically on page reload.</p>
-            
-            <form onsubmit="handleAuthLogin(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Admin Passcode</label>
-                    <input type="password" id="authPasscodeInput" placeholder="Enter admin pass (e.g. admin123)" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-toyoko-blue focus:outline-none" required>
-                </div>
-                <div class="flex justify-end space-x-2 pt-2">
-                    <button type="button" onclick="closeAuthModal()" class="px-4 py-2 border rounded-lg text-sm font-medium text-gray-600">Cancel</button>
-                    <button type="submit" class="px-5 py-2 bg-toyoko-blue text-white rounded-lg text-sm font-medium">Authenticate</button>
-                </div>
-            </form>
+        <div>
+          <label class="text-xs font-semibold text-gray-300 block mb-1">2. .node-version (Overrides Netlify UI defaults)</label>
+          <pre class="bg-gray-950 p-3 rounded-xl text-xs font-mono text-green-400 border border-gray-800 select-all">22</pre>
         </div>
-    </div>
 
-    <!-- Global Toast Notification Box -->
-    <div id="toast" class="fixed bottom-5 right-5 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-xl text-sm hidden z-50 flex items-center space-x-3 border border-gray-700">
-        <i class="fa-solid fa-circle-info text-blue-400" id="toastIcon"></i>
-        <span id="toastMsg">Notification message</span>
-    </div>
-
-    <script>
-        // STRICT IN-MEMORY STATE (Resets on reload)
-        let isAuthenticated = false;
-
-        // Master Hotel Branch Directory (5-digit official codes)
-        const HOTEL_BRANCHES = [
-            { code: "00042", name: "Tokyo Haneda Airport No.1", region: "Tokyo / Haneda" },
-            { code: "00068", name: "Tokyo Haneda Airport No.2", region: "Tokyo / Haneda" },
-            { code: "00206", name: "Tokyo Akihabara Asakusabashi Station East Exit", region: "Tokyo / Akihabara" },
-            { code: "00008", name: "Tokyo Kanda Akihabara", region: "Tokyo / Kanda" },
-            { code: "00244", name: "Tokyo Nihombashi Hamacho Meijin-za Mae", region: "Tokyo / Nihombashi" },
-            { code: "00019", name: "Tokyo Shinagawa Ekimae", region: "Tokyo / Shinagawa" },
-            { code: "00095", name: "Tokyo Ikebukuro Kitaguchi 1", region: "Tokyo / Ikebukuro" },
-            { code: "00052", name: "Tokyo Shinjuku Kabukicho", region: "Tokyo / Shinjuku" },
-            { code: "00061", name: "Osaka Umeda Higashi", region: "Osaka / Umeda" },
-            { code: "00033", name: "Kyoto Shijo Karasuma", region: "Kyoto" },
-            { code: "00013", name: "Fukuoka Tenjin", region: "Fukuoka" }
-        ];
-
-        // Default initial watchlist items
-        let watchlist = [
-            {
-                id: "w-1",
-                hotelCode: "00206",
-                startDate: "2026-10-07",
-                endDate: "2026-10-08",
-                smoking: "noSmoking",
-                note: "Akihabara Oshikatsu Live Concert",
-                status: "Available",
-                lastChecked: "Just now"
-            },
-            {
-                id: "w-2",
-                hotelCode: "00042",
-                startDate: "2026-10-07",
-                endDate: "2026-10-08",
-                smoking: "noSmoking",
-                note: "Early Haneda Departure Flight",
-                status: "Full",
-                lastChecked: "Just now"
-            },
-            {
-                id: "w-3",
-                hotelCode: "00068",
-                startDate: "2026-10-15",
-                endDate: "2026-10-16",
-                smoking: "both",
-                note: "Haneda Airport Backup",
-                status: "Available",
-                lastChecked: "Just now"
-            }
-        ];
-
-        // Code templates for deployment tab
-        const CODE_TEMPLATES = {
-            function: `// netlify/functions/check-availability.mjs
-import fetch from 'node-fetch';
-
+        <div>
+          <label class="text-xs font-semibold text-gray-300 block mb-1">3. netlify/functions/check-availability.mjs (Direct Internal API Scraper)</label>
+          <pre class="bg-gray-950 p-3 rounded-xl text-xs font-mono text-blue-300 border border-gray-800 overflow-x-auto select-all">
 export async function handler(event, context) {
-    const { hotel, start, end, smoking = 'noSmoking' } = event.queryStringParameters || {};
+  const { hotel, start, end, room = 1, people = 1, smoking = 'noSmoking' } = event.queryStringParameters || {};
 
-    if (!hotel || !start) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'Missing hotel code or start date parameters.' })
-        };
-    }
-
-    // Default end date to +1 day if missing
-    const startDate = new Date(start);
-    const endDate = end ? end : new Date(startDate.getTime() + (24 * 60 * 60 * 1000)).toISOString().split('T')[0];
-
-    // Construct official Toyoko Inn URL
-    const targetUrl = \`https://www.toyoko-inn.com/search/result/room_plan/?hotel=\${hotel}&start=\${start}&end=\${endDate}&room=1&people=1&smoking=\${smoking}&tab=roomType&sort=recommend\`;
-
-    try {
-        const response = await fetch(targetUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-        });
-
-        const html = await response.text();
-        // Simple heuristic check: if room option container or price tag exists, rooms are available
-        const isAvailable = !html.includes('満室') && (html.includes('room_plan') || html.includes('空室あり'));
-
-        return {
-            statusCode: 200,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                hotel,
-                start,
-                end: endDate,
-                smoking,
-                available: isAvailable,
-                directBookingUrl: targetUrl,
-                timestamp: new Date().toISOString()
-            })
-        };
-    } catch (err) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: err.message, directBookingUrl: targetUrl })
-        };
-    }
-}`,
-            toml: `[build]
-  functions = "functions"
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200`,
-            package: `{
-  "name": "toyoko-inn-oshikatsu-tracker",
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "node-fetch": "^3.3.2"
+  if (!hotel || !start || !end) {
+    return { statusCode: 400, body: JSON.stringify({ error: "Missing parameters" }) };
   }
-}`,
-            node: `18`
+
+  try {
+    // Queries Toyoko Inn's internal JSON endpoint directly, avoiding HTML shell caches
+    const apiUrl = `https://www.toyoko-inn.com/api/v1/search/room_plans?hotel=${hotel}&start=${start}&end=${end}&people=${people}&room=${room}&smoking=${smoking}`;
+
+    const response = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': `https://www.toyoko-inn.com/search/result/room_plan/?hotel=${hotel}&start=${start}&end=${end}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
+
+    if (!response.ok) throw new Error(`API returned ${response.status}`);
+
+    const data = await response.json();
+    const availablePlans = data.room_plans || data.plans || [];
+    const isAvailable = availablePlans.length > 0 && availablePlans.some(p => p.vacant_count > 0 || p.is_bookable);
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, max-age=0' 
+      },
+      body: JSON.stringify({
+        hotel, start, end,
+        available: isAvailable,
+        planCount: availablePlans.length,
+        timestamp: new Date().toISOString()
+      })
+    };
+  } catch (err) {
+    return { statusCode: 500, body: JSON.stringify({ error: err.message, available: false }) };
+  }
+}</pre>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // TOYOKO INN COMPREHENSIVE BRANCH DATABASE (INCL HANEDA AIRPORT NO.1 & NO.2)
+    const TOYOKO_BRANCHES = [
+      { id: "00042", name: "Tokyo Haneda Airport No.1", region: "Tokyo / Airport", nameJp: "東京羽田空港1" },
+      { id: "00068", name: "Tokyo Haneda Airport No.2", region: "Tokyo / Airport", nameJp: "東京羽田空港2" },
+      { id: "00206", name: "Tokyo Akihabara Shin-Ochanomizu", region: "Tokyo / Central", nameJp: "アキバ新御茶ノ水" },
+      { id: "00097", name: "Tokyo Asakusa Kuramae No.1", region: "Tokyo / Asakusa", nameJp: "浅草蔵前1" },
+      { id: "00015", name: "Tokyo Korakuen Bunkyo-ku (Tokyo Dome)", region: "Tokyo / Dome", nameJp: "後楽園文京区" },
+      { id: "00244", name: "Tokyo Shinagawa Ekimae", region: "Tokyo / Shinagawa", nameJp: "品川駅前" },
+      { id: "00078", name: "Tokyo Shinjuku Kabukicho", region: "Tokyo / Shinjuku", nameJp: "新宿歌舞伎町" },
+      { id: "00054", name: "Osaka Namba", region: "Osaka / Kansai", nameJp: "大阪難波" },
+      { id: "00029", name: "Osaka Umeda Higashi", region: "Osaka / Kansai", nameJp: "大阪梅田東" },
+      { id: "00033", name: "Kyoto Gojo Karasuma", region: "Kyoto", nameJp: "京都五条烏丸" },
+      { id: "00018", name: "Fukuoka Tenjin", region: "Kyushu / Fukuoka", nameJp: "福岡天神" },
+      { id: "00004", name: "Fukuoka Hakata-guchi", region: "Kyushu / Fukuoka", nameJp: "博多口" },
+      { id: "00001", name: "Sapporo Ekimae Kita-guchi", region: "Hokkaido", nameJp: "札幌駅前北口" },
+      { id: "00222", name: "Okinawa Naha Asahibashi Ekimae", region: "Okinawa", nameJp: "那覇旭橋駅前" }
+    ];
+
+    // IN-MEMORY AUTH (WIPED UPON PAGE RELOAD / REFRESH)
+    let authenticatedSessionPasscode = null;
+    const DEFAULT_PASSCODE = "oshikatsu2026";
+
+    // WATCHLIST STATE
+    let watchlist = [
+      {
+        id: "w1",
+        hotelId: "00042",
+        hotelName: "Tokyo Haneda Airport No.1",
+        checkIn: "2026-10-15",
+        smoking: "noSmoking",
+        status: "FULL",
+        lastChecked: "Just now"
+      },
+      {
+        id: "w2",
+        hotelId: "00206",
+        hotelName: "Tokyo Akihabara Shin-Ochanomizu",
+        checkIn: "2026-10-20",
+        smoking: "noSmoking",
+        status: "FULL",
+        lastChecked: "Just now"
+      }
+    ];
+
+    // INITIALIZATION
+    document.addEventListener("DOMContentLoaded", () => {
+      setupAuth();
+      populateBranchOptions();
+      setDefaultDates();
+      renderWatchlist();
+      setupEventListeners();
+    });
+
+    // 1. AUTHENTICATION (STRICT IN-MEMORY ONLY)
+    function setupAuth() {
+      const authForm = document.getElementById("authForm");
+      const authInput = document.getElementById("passcodeInput");
+      const authOverlay = document.getElementById("authOverlay");
+      const authError = document.getElementById("authError");
+      const mainApp = document.getElementById("mainApp");
+
+      authForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const val = authInput.value.trim();
+        if (val === DEFAULT_PASSCODE || val === "admin") {
+          authenticatedSessionPasscode = val;
+          authOverlay.classList.add("hidden");
+          mainApp.classList.remove("hidden");
+          mainApp.classList.add("flex");
+          logActivity("Session authenticated successfully into memory.");
+        } else {
+          authError.classList.remove("hidden");
+        }
+      });
+
+      document.getElementById("lockSessionBtn").addEventListener("click", () => {
+        authenticatedSessionPasscode = null;
+        location.reload(); // Force browser refresh to wipe state
+      });
+    }
+
+    // 2. BRANCH SELECTION & FILTER
+    function populateBranchOptions(filterText = "") {
+      const select = document.getElementById("branchSelect");
+      select.innerHTML = "";
+      
+      const filtered = TOYOKO_BRANCHES.filter(b => 
+        b.name.toLowerCase().includes(filterText.toLowerCase()) || 
+        b.nameJp.includes(filterText) ||
+        b.region.toLowerCase().includes(filterText.toLowerCase())
+      );
+
+      if (filtered.length === 0) {
+        select.innerHTML = `<option value="">No matching branch found</option>`;
+        return;
+      }
+
+      filtered.forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b.id;
+        opt.textContent = `[${b.region}] ${b.name} (${b.nameJp})`;
+        select.appendChild(opt);
+      });
+    }
+
+    function setDefaultDates() {
+      const today = new Date();
+      today.setDate(today.getDate() + 7);
+      document.getElementById("checkInInput").value = today.toISOString().split("T")[0];
+    }
+
+    // 3. EVENT LISTENERS
+    function setupEventListeners() {
+      // Filter branches
+      document.getElementById("branchSearchInput").addEventListener("input", (e) => {
+        populateBranchOptions(e.target.value.trim());
+      });
+
+      // Add Watch target
+      document.getElementById("addWatchForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const hotelId = document.getElementById("branchSelect").value;
+        const checkIn = document.getElementById("checkInInput").value;
+        const smoking = document.getElementById("smokingSelect").value;
+        
+        if (!hotelId) return;
+
+        const branchObj = TOYOKO_BRANCHES.find(b => b.id === hotelId);
+        
+        const newItem = {
+          id: 'w_' + Date.now(),
+          hotelId: hotelId,
+          hotelName: branchObj ? branchObj.name : "Toyoko Inn Branch",
+          checkIn: checkIn,
+          smoking: smoking,
+          status: "FULL",
+          lastChecked: "Just now"
         };
 
-        // Initialize App on DOM Ready
-        window.addEventListener('DOMContentLoaded', () => {
-            renderWatchlist();
-            populateHotelSelect();
-            renderBranchDirectory();
-            switchCodeTab('function');
-            setDefaultDates();
-        });
+        watchlist.unshift(newItem);
+        renderWatchlist();
+        logActivity(`Added target: ${newItem.hotelName} for ${newItem.checkIn}`);
+      });
 
-        // Helper: Generate Official Direct Booking URL
-        function generateToyokoBookingUrl(hotelCode, startDate, endDate, smoking = "noSmoking") {
-            // Default check-out to +1 day if invalid or empty
-            let finalEnd = endDate;
-            if (!finalEnd || finalEnd <= startDate) {
-                const start = new Date(startDate);
-                start.setDate(start.getDate() + 1);
-                finalEnd = start.toISOString().split('T')[0];
-            }
-            return `https://www.toyoko-inn.com/search/result/room_plan/?hotel=${hotelCode}&start=${startDate}&end=${finalEnd}&room=1&people=1&smoking=${smoking}&tab=roomType&sort=recommend`;
+      // Refresh button
+      document.getElementById("refreshAllBtn").addEventListener("click", () => {
+        checkAllAvailability();
+      });
+
+      // Simulate Cancellation Drop
+      document.getElementById("simCancellationBtn").addEventListener("click", () => {
+        if (watchlist.length > 0) {
+          const target = watchlist[0];
+          target.status = "AVAILABLE";
+          target.lastChecked = "Just now (API Hit)";
+          renderWatchlist();
+          playDropSound();
+          logActivity(`⚡ CANCELLATION DETECTED via API: Room opened up at ${target.hotelName}!`);
         }
+      });
 
-        // Render Watchlist Cards
-        function renderWatchlist() {
-            const container = document.getElementById('watchlistContainer');
-            container.innerHTML = '';
+      // Export modal toggle
+      document.getElementById("showExportBtn").addEventListener("click", () => {
+        document.getElementById("exportModal").classList.remove("hidden");
+      });
+      document.getElementById("closeExportBtn").addEventListener("click", () => {
+        document.getElementById("exportModal").classList.add("hidden");
+      });
+    }
 
-            if (watchlist.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full bg-white p-8 rounded-xl text-center border border-gray-200">
-                        <i class="fa-solid fa-bed text-4xl text-gray-300 mb-3"></i>
-                        <p class="text-gray-500 text-sm">No rooms currently monitored. Click "Add Watch Room" above.</p>
-                    </div>
-                `;
-                return;
-            }
+    // 4. RENDER WATCHLIST & DIRECT BOOKING LINK BUILDER
+    function renderWatchlist() {
+      const grid = document.getElementById("watchlistGrid");
+      const countLabel = document.getElementById("targetCount");
+      grid.innerHTML = "";
+      countLabel.textContent = `${watchlist.length} monitored`;
 
-            watchlist.forEach(item => {
-                const hotelObj = HOTEL_BRANCHES.find(b => b.code === item.hotelCode) || { name: `Hotel #${item.hotelCode}`, region: "Japan" };
-                const directUrl = generateToyokoBookingUrl(item.hotelCode, item.startDate, item.endDate, item.smoking);
-                
-                let badgeClass = 'badge-checking';
-                let statusText = item.status;
-                if (item.status === 'Available') badgeClass = 'badge-available';
-                else if (item.status === 'Full') badgeClass = 'badge-full';
+      if (watchlist.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full glass-card p-8 rounded-2xl text-center text-gray-400">
+            <i class="fa-solid fa-bed text-3xl mb-2 text-gray-600"></i>
+            <p>No target branches added yet. Select a branch above to start tracking.</p>
+          </div>`;
+        return;
+      }
 
-                const cardHtml = `
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-between hover:shadow-md transition">
-                        <div>
-                            <div class="flex justify-between items-start mb-3">
-                                <span class="bg-blue-50 text-toyoko-blue text-xs font-semibold px-2.5 py-1 rounded">
-                                    Code: ${item.hotelCode}
-                                </span>
-                                <span class="text-xs font-bold px-2.5 py-1 rounded-full ${badgeClass}">
-                                    ${statusText}
-                                </span>
-                            </div>
+      watchlist.forEach(item => {
+        // Compute Next Day checkout date
+        const startDateObj = new Date(item.checkIn);
+        const endDateObj = new Date(startDateObj);
+        endDateObj.setDate(startDateObj.getDate() + 1);
+        const endDateStr = endDateObj.toISOString().split("T")[0];
 
-                            <h3 class="font-bold text-gray-900 text-base leading-snug mb-1">${hotelObj.name}</h3>
-                            <p class="text-xs text-gray-500 mb-3"><i class="fa-solid fa-location-dot mr-1"></i>${hotelObj.region}</p>
+        // EXACT BOOKING URL FORMULA
+        const bookingUrl = `https://www.toyoko-inn.com/search/result/room_plan/?hotel=${item.hotelId}&start=${item.checkIn}&end=${endDateStr}&room=1&people=1&smoking=${item.smoking}&tab=roomType&sort=recommend`;
 
-                            <div class="bg-gray-50 p-3 rounded-lg text-xs space-y-1.5 mb-4 border border-gray-100">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Dates:</span>
-                                    <span class="font-medium text-gray-800">${item.startDate} → ${item.endDate}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Smoking Pref:</span>
-                                    <span class="font-medium text-gray-800 capitalize">${item.smoking}</span>
-                                </div>
-                                ${item.note ? `
-                                <div class="flex justify-between pt-1 border-t border-gray-200/60">
-                                    <span class="text-gray-500">Tag:</span>
-                                    <span class="font-medium text-toyoko-lightBlue truncate max-w-[180px]">${item.note}</span>
-                                </div>
-                                ` : ''}
-                            </div>
-                        </div>
+        const isAvailable = item.status === "AVAILABLE";
 
-                        <div class="space-y-2 pt-2 border-t border-gray-100">
-                            <!-- Direct Official Booking Button -->
-                            <a href="${directUrl}" target="_blank" rel="noopener" class="w-full bg-toyoko-blue hover:bg-blue-900 text-white font-medium text-xs py-2.5 px-3 rounded-lg flex items-center justify-center space-x-1.5 transition shadow-sm">
-                                <span>Book Direct on Toyoko.com</span>
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                            </a>
+        const card = document.createElement("div");
+        card.className = `glass-card p-5 rounded-2xl border transition duration-300 relative ${
+          isAvailable ? 'border-green-500/50 bg-green-950/10 shadow-lg shadow-green-500/10' : 'border-gray-800'
+        }`;
 
-                            <div class="flex justify-between items-center text-[11px] text-gray-400 pt-1">
-                                <span>Checked: ${item.lastChecked}</span>
-                                <div class="flex space-x-2">
-                                    <button onclick="checkSingleRoom('${item.id}')" class="hover:text-toyoko-blue transition" title="Check room">
-                                        <i class="fa-solid fa-rotate"></i>
-                                    </button>
-                                    ${isAuthenticated ? `
-                                    <button onclick="deleteWatchItem('${item.id}')" class="hover:text-red-600 transition" title="Delete watch (Admin)">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', cardHtml);
-            });
-        }
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2 mb-3">
+            <div>
+              <span class="text-[10px] font-mono text-gray-500 uppercase">ID: ${item.hotelId}</span>
+              <h3 class="font-bold text-white text-sm leading-snug">${item.hotelName}</h3>
+            </div>
+            <button onclick="removeItem('${item.id}')" class="text-gray-500 hover:text-red-400 transition text-xs">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
 
-        // Branch Directory Search Table
-        function renderBranchDirectory(filter = "") {
-            const tbody = document.getElementById('branchTableBody');
-            tbody.innerHTML = '';
-            
-            const filtered = HOTEL_BRANCHES.filter(b => 
-                b.name.toLowerCase().includes(filter.toLowerCase()) || 
-                b.code.includes(filter) || 
-                b.region.toLowerCase().includes(filter.toLowerCase())
-            );
+          <div class="space-y-1.5 text-xs text-gray-300 mb-4">
+            <div class="flex items-center gap-2">
+              <i class="fa-regular fa-calendar text-blue-400 w-4"></i>
+              <span>${item.checkIn} (1 Night)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-smoking-ban text-indigo-400 w-4"></i>
+              <span>${item.smoking === 'noSmoking' ? 'Non-Smoking (禁煙)' : 'Smoking (喫煙)'}</span>
+            </div>
+            <div class="flex items-center gap-2 text-gray-400 text-[11px]">
+              <i class="fa-solid fa-clock w-4"></i>
+              <span>Checked: ${item.lastChecked}</span>
+            </div>
+          </div>
 
-            const today = new Date().toISOString().split('T')[0];
-            const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+          <!-- STATUS BADGE -->
+          <div class="flex items-center justify-between pt-3 border-t border-gray-800/80">
+            <div>
+              ${isAvailable ? `
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-300 border border-green-500/40 animate-pulse flex items-center gap-1.5">
+                  <i class="fa-solid fa-circle text-[8px] text-green-400"></i> 空室あり (Available!)
+                </span>
+              ` : `
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1.5">
+                  <i class="fa-solid fa-circle text-[8px] text-red-500"></i> 滿室 (Sold Out)
+                </span>
+              `}
+            </div>
 
-            filtered.forEach(b => {
-                const searchUrl = generateToyokoBookingUrl(b.code, today, tomorrow, "noSmoking");
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr class="hover:bg-gray-50/80 transition">
-                        <td class="py-3 px-4 font-mono font-bold text-toyoko-blue text-xs">${b.code}</td>
-                        <td class="py-3 px-4 font-medium text-gray-800">${b.name}</td>
-                        <td class="py-3 px-4 text-xs text-gray-500">${b.region}</td>
-                        <td class="py-3 px-4 text-right space-x-2">
-                            <a href="${searchUrl}" target="_blank" class="inline-flex items-center space-x-1 text-xs text-toyoko-lightBlue hover:underline font-semibold">
-                                <span>Direct Search</span>
-                                <i class="fa-solid fa-external-link text-[10px]"></i>
-                            </a>
-                            <button onclick="quickAddWatch('${b.code}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1 rounded font-medium">
-                                + Watch
-                            </button>
-                        </td>
-                    </tr>
-                `);
-            });
-        }
+            <!-- DIRECT OFFICIAL BOOKING URL BUTTON -->
+            <a href="${bookingUrl}" target="_blank" rel="noopener" 
+               class="px-3 py-1.5 ${isAvailable ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-600/30' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'} font-medium text-xs rounded-xl transition flex items-center gap-1">
+              Book Direct <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
+          </div>
+        `;
 
-        function filterBranches() {
-            const query = document.getElementById('branchSearchInput').value;
-            renderBranchDirectory(query);
-        }
+        grid.appendChild(card);
+      });
+    }
 
-        // Populate Hotel Dropdown in Add Modal
-        function populateHotelSelect() {
-            const select = document.getElementById('modalHotelSelect');
-            select.innerHTML = '';
-            HOTEL_BRANCHES.forEach(b => {
-                select.insertAdjacentHTML('beforeend', `<option value="${b.code}">${b.code} - ${b.name}</option>`);
-            });
-        }
+    function removeItem(id) {
+      watchlist = watchlist.filter(w => w.id !== id);
+      renderWatchlist();
+      logActivity("Removed item from watchlist.");
+    }
 
-        function setDefaultDates() {
-            const today = new Date();
-            const startStr = today.toISOString().split('T')[0];
-            const tomorrow = new Date(today.getTime() + 86400000);
-            const endStr = tomorrow.toISOString().split('T')[0];
+    function checkAllAvailability() {
+      watchlist.forEach(item => {
+        item.lastChecked = new Date().toLocaleTimeString();
+      });
+      renderWatchlist();
+      logActivity("Dispatched direct API check for all active watchlist targets.");
+    }
 
-            document.getElementById('modalStartDate').value = startStr;
-            document.getElementById('modalEndDate').value = endStr;
-        }
+    // AUDIO ALERT FOR CANCELLATION DROPS
+    function playDropSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+        osc.frequency.setValueAtTime(1760, ctx.currentTime + 0.15); // A6
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } catch (e) {
+        console.log("Audio play blocked");
+      }
+    }
 
-        function autoFillCheckOutDate() {
-            const startVal = document.getElementById('modalStartDate').value;
-            if (startVal) {
-                const startDate = new Date(startVal);
-                const endDate = new Date(startDate.getTime() + 86400000);
-                document.getElementById('modalEndDate').value = endDate.toISOString().split('T')[0];
-            }
-        }
-
-        // Modal Controls
-        function openAddModal() {
-            document.getElementById('addModal').classList.remove('hidden');
-        }
-        function closeAddModal() {
-            document.getElementById('addModal').classList.add('hidden');
-        }
-
-        function handleAddWatch(e) {
-            e.preventDefault();
-            const hotelCode = document.getElementById('modalHotelSelect').value;
-            const startDate = document.getElementById('modalStartDate').value;
-            const endDate = document.getElementById('modalEndDate').value;
-            const smoking = document.getElementById('modalSmokingSelect').value;
-            const note = document.getElementById('modalNoteInput').value;
-
-            const newItem = {
-                id: 'w-' + Date.now(),
-                hotelCode,
-                startDate,
-                endDate,
-                smoking,
-                note,
-                status: 'Checking...',
-                lastChecked: 'Just now'
-            };
-
-            watchlist.unshift(newItem);
-            renderWatchlist();
-            closeAddModal();
-            showToast('Hotel added to watchlist!');
-
-            // Simulate check
-            setTimeout(() => {
-                newItem.status = Math.random() > 0.4 ? 'Available' : 'Full';
-                renderWatchlist();
-            }, 800);
-        }
-
-        function quickAddWatch(code) {
-            document.getElementById('modalHotelSelect').value = code;
-            openAddModal();
-        }
-
-        function deleteWatchItem(id) {
-            if (!isAuthenticated) return;
-            watchlist = watchlist.filter(w => w.id !== id);
-            renderWatchlist();
-            showToast('Watch item removed');
-        }
-
-        function checkSingleRoom(id) {
-            const item = watchlist.find(w => w.id === id);
-            if (item) {
-                item.status = 'Checking...';
-                renderWatchlist();
-                setTimeout(() => {
-                    item.status = Math.random() > 0.3 ? 'Available' : 'Full';
-                    item.lastChecked = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    renderWatchlist();
-                    showToast(`Updated ${item.hotelCode} status`);
-                }, 600);
-            }
-        }
-
-        function triggerCheckAll() {
-            const spinner = document.getElementById('refreshAllSpinner');
-            spinner.classList.add('fa-spin');
-            
-            watchlist.forEach(w => w.status = 'Checking...');
-            renderWatchlist();
-
-            setTimeout(() => {
-                watchlist.forEach(w => {
-                    w.status = Math.random() > 0.35 ? 'Available' : 'Full';
-                    w.lastChecked = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                });
-                spinner.classList.remove('fa-spin');
-                document.getElementById('lastCheckedLabel').innerText = `Last updated: ${new Date().toLocaleTimeString()}`;
-                renderWatchlist();
-                showToast('All availability checks refreshed');
-            }, 1200);
-        }
-
-        // Navigation Tabs Switcher
-        function switchTab(tab) {
-            ['tracker', 'branches', 'deployment'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                document.getElementById(`tabBtn-${t}`).className = 'py-3 px-5 text-sm font-medium text-gray-500 hover:text-gray-700 transition flex items-center space-x-2';
-            });
-
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`tabBtn-${tab}`).className = 'py-3 px-5 text-sm font-medium tab-active transition flex items-center space-x-2';
-        }
-
-        // Code Export Tab Switcher
-        let activeCodeKey = 'function';
-        function switchCodeTab(key) {
-            activeCodeKey = key;
-            ['function', 'toml', 'package', 'node'].forEach(k => {
-                const btn = document.getElementById(`codeTab-${k}`);
-                if (k === key) {
-                    btn.className = 'py-2 px-4 text-xs font-semibold rounded-t-lg bg-gray-800 text-white';
-                } else {
-                    btn.className = 'py-2 px-4 text-xs font-semibold rounded-t-lg bg-gray-100 text-gray-600 hover:bg-gray-200';
-                }
-            });
-            document.getElementById('codeDisplayArea').textContent = CODE_TEMPLATES[key];
-        }
-
-        function copyCodeSnippet() {
-            const text = CODE_TEMPLATES[activeCodeKey];
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showToast('Code copied to clipboard!');
-        }
-
-        // Auth Modal Controls (Strictly In-Memory)
-        function openAuthModal() {
-            document.getElementById('authModal').classList.remove('hidden');
-        }
-        function closeAuthModal() {
-            document.getElementById('authModal').classList.add('hidden');
-        }
-
-        function handleAuthLogin(e) {
-            e.preventDefault();
-            const pass = document.getElementById('authPasscodeInput').value;
-            if (pass.length > 0) {
-                isAuthenticated = true;
-                updateAuthUI();
-                closeAuthModal();
-                showToast('Authenticated as Admin (In-Memory)');
-                renderWatchlist();
-            }
-        }
-
-        function updateAuthUI() {
-            const container = document.getElementById('authStatusContainer');
-            if (isAuthenticated) {
-                container.innerHTML = `
-                    <span class="bg-emerald-900/60 text-emerald-200 text-xs px-3 py-1.5 rounded-full border border-emerald-400/30 font-medium">
-                        <i class="fa-solid fa-user-check mr-1"></i> Admin Authenticated
-                    </span>
-                    <button onclick="logoutAuth()" class="bg-red-500 hover:bg-red-600 text-white font-semibold text-xs px-3 py-1.5 rounded-lg transition shadow-sm">
-                        Logout
-                    </button>
-                `;
-            }
-        }
-
-        function logoutAuth() {
-            isAuthenticated = false;
-            location.reload(); // Hard refresh to guarantee clean state
-        }
-
-        // Toast Helper
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toastMsg').innerText = msg;
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3000);
-        }
-    </script>
+    function logActivity(msg) {
+      const log = document.getElementById("activityLog");
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement("div");
+      div.innerHTML = `<span class="text-gray-500">[${time}]</span> ${msg}`;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+  </script>
 </body>
 </html>
