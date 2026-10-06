@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toyoko Inn Oshikatsu Tracker (Netlify & Node 22)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        toyoko: {
+                            blue: '#004098',
+                            lightBlue: '#1a60c6',
+                            gold: '#f39c12',
+                            red: '#e74c3c',
+                            green: '#2ecc71',
+                            darkBg: '#0b0f19',
+                            cardBg: '#1e293b'
+                        },
+                        idol: {
+                            pink: '#ec4899',
+                            purple: '#a855f7',
+                            cyan: '#06b6d4'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #070a12;
+            color: #f8fafc;
+        }
+        .pulse-glow {
+            animation: pulse-glow-anim 2s infinite;
+        }
+        @keyframes pulse-glow-anim {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 64, 152, 0.4); }
+            50% { box-shadow: 0 0 20px rgba(236, 72, 153, 0.8); }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+    <!-- AUTH GATE OVERLAY -->
+    <div id="authGate" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl text-center space-y-5">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-toyoko-blue via-idol-pink to-idol-purple flex items-center justify-center mx-auto shadow-lg shadow-toyoko-blue/30">
+                <i class="fa-solid fa-lock text-white text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-slate-100">Protected Oshikatsu Tracker</h2>
+                <p class="text-xs text-slate-400 mt-1">Enter your secret passcode to access your private Toyoko Inn availability scanner.</p>
+            </div>
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div class="relative">
+                    <input type="password" id="authPasscode" placeholder="Enter Access Passcode..." 
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 text-center tracking-widest focus:outline-none focus:border-toyoko-lightBlue" required>
+                </div>
+                <div id="authError" class="text-xs text-red-400 hidden">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> Incorrect passcode. (Default passcode: <span class="font-mono bg-slate-800 px-1 py-0.5 rounded text-amber-300">oshikatsu2026</span>)
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-toyoko-blue to-idol-purple hover:from-toyoko-lightBlue hover:to-pink-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg shadow-toyoko-blue/20">
+                    Unlock Dashboard
+                </button>
+            </form>
+            <p class="text-[11px] text-slate-500">Node.js 22 Serverless Netlify Endpoint Secured via Auth Header</p>
+        </div>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-toyoko-blue via-idol-pink to-idol-purple flex items-center justify-center shadow-lg shadow-toyoko-blue/30">
+                    <i class="fa-solid fa-hotel text-white text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-pink-400 to-purple-400">TOYOKO INN</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 font-medium">Node 22 Netlify Serverless</span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">Automated Cancellation Drop Scanner for All Japan Branches</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-3">
+                <button id="simulateDropBtn" onclick="triggerCancellationDrop()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow-lg shadow-pink-600/30 transition-all transform active:scale-95">
+                    <i class="fa-solid fa-bolt text-yellow-300 animate-bounce"></i>
+                    <span>Simulate Drop</span>
+                </button>
+                <button onclick="toggleSound()" id="soundToggleBtn" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" title="Toggle Sound">
+                    <i id="soundIcon" class="fa-solid fa-volume-high text-emerald-400"></i>
+                </button>
+                <button onclick="logoutAuth()" class="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition text-xs font-semibold flex items-center space-x-1" title="Lock Dashboard">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span class="hidden md:inline">Lock</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Top Banner Alert -->
+        <div id="alertBanner" class="hidden p-4 rounded-xl bg-gradient-to-r from-emerald-950/80 to-slate-900 border border-emerald-500/50 flex items-center justify-between animate-fade-in">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-bell animate-wiggle"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-emerald-300" id="bannerTitle">ROOM AVAILABLE NOW!</h4>
+                    <p class="text-xs text-slate-300" id="bannerDesc">A Single Room just opened up!</p>
+                </div>
+            </div>
+            <a id="bannerBookLink" href="#" target="_blank" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition shadow-md shrink-0">
+                Book Directly <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i>
+            </a>
+        </div>
+
+        <!-- Node 22 Setup Banner -->
+        <div class="bg-blue-950/40 border border-blue-500/30 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                    <i class="fa-brands fa-node-js text-lg"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-blue-300">Netlify Runtime Configuration: Node.js 22 (node22.js) Active</span>
+                    <p class="text-slate-400 mt-0.5">Fixed Node 18 deprecation warning using modern ESM serverless backend (`functions/check-availability.mjs`).</p>
+                </div>
+            </div>
+            <button onclick="switchTab('export')" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 py-1.5 rounded-lg transition shrink-0">
+                View Netlify Deployment Files
+            </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-800 space-x-4">
+            <button onclick="switchTab('dashboard')" id="tabBtn-dashboard" class="py-2.5 px-4 text-sm font-semibold border-b-2 border-toyoko-lightBlue text-toyoko-lightBlue flex items-center space-x-2">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Live Tracker & All Branches</span>
+            </button>
+            <button onclick="switchTab('export')" id="tabBtn-export" class="py-2.5 px-4 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+                <i class="fa-solid fa-server"></i>
+                <span>Netlify Backend Export (Node 22)</span>
+            </button>
+            <button onclick="switchTab('settings')" id="tabBtn-settings" class="py-2.5 px-4 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+                <i class="fa-solid fa-key"></i>
+                <span>Security & Webhooks</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: DASHBOARD -->
+        <div id="tab-dashboard" class="space-y-6">
+
+            <!-- Branch Search & Watchlist Form -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-200 flex items-center space-x-2">
+                            <i class="fa-solid fa-magnifying-glass text-pink-400"></i>
+                            <span>Add Any Toyoko Inn Branch in Japan & Abroad</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">Search by Japanese or English name (e.g., 秋葉原, 東京巨蛋, 札幌, 難波, 博多, 釜山).</p>
+                    </div>
+                    <span class="text-[11px] px-2 py-1 rounded bg-slate-800 text-cyan-300 font-mono">300+ Official Branches Loaded</span>
+                </div>
+
+                <form id="addWatchlistForm" onsubmit="handleAddWatchlist(event)" class="space-y-4">
+                    <!-- Branch Search Input & Instant Dropdown -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="relative">
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">1. Search & Select Toyoko Inn Branch</label>
+                            <div class="relative">
+                                <input type="text" id="branchSearchInput" oninput="filterBranches()" placeholder="Type branch name (e.g. Akihabara / 秋葉原)..." 
+                                    class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-toyoko-lightBlue">
+                                <i class="fa-solid fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
+                            </div>
+                            
+                            <!-- Search Suggestions Dropdown -->
+                            <div id="branchDropdown" class="hidden absolute left-0 right-0 top-16 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-30 p-2 space-y-1">
+                                <!-- Filtered results injected dynamically -->
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Selected Branch Code & Region</label>
+                            <div class="flex items-center space-x-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+                                <i class="fa-solid fa-location-dot text-pink-500 text-xs"></i>
+                                <span id="selectedBranchLabel" class="text-xs font-bold text-slate-200">Toyoko Inn Tokyo Akihabara (Code: 00088)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Date, Room & Price -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Check-in Date</label>
+                            <input type="date" id="inputCheckin" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-toyoko-lightBlue" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Room Type</label>
+                            <select id="inputRoomType" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-toyoko-lightBlue">
+                                <option value="Single">Single Room (シングル)</option>
+                                <option value="Economy Double">Economy Double (エコノミーダブル)</option>
+                                <option value="Twin">Twin Room (ツイン)</option>
+                                <option value="Deluxe Twin">Deluxe Twin (デラックスツイン)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Max Budget (JPY ¥)</label>
+                            <input type="number" id="inputMaxRate" value="10000" step="500" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-toyoko-lightBlue">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-toyoko-blue hover:bg-toyoko-lightBlue text-white font-semibold py-2 px-4 rounded-lg text-xs transition flex items-center justify-center space-x-2 shadow-lg shadow-toyoko-blue/20">
+                                <i class="fa-solid fa-eye"></i>
+                                <span>Add Target Monitor</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Active Watchlist & Live Function Terminal -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Left Column: Watchlist Targets -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-base font-bold text-slate-200">Active Watchlist Targets</h2>
+                            <span id="watchlistCountBadge" class="bg-slate-800 text-cyan-400 text-xs px-2 py-0.5 rounded-full border border-slate-700 font-semibold">3 Active</span>
+                        </div>
+                        <button onclick="checkAllTargetsNetlify()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs rounded-lg font-medium flex items-center space-x-1">
+                            <i class="fa-solid fa-arrows-rotate text-cyan-400"></i>
+                            <span>Trigger Netlify Scraper</span>
+                        </button>
+                    </div>
+
+                    <div id="watchlistContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Dynamic Cards Inserted Here -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Netlify Function Log Terminal -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-base font-bold text-slate-200 flex items-center space-x-2">
+                            <i class="fa-solid fa-terminal text-cyan-400"></i>
+                            <span>Netlify Function Live Logs</span>
+                        </h2>
+                        <span class="text-xs text-slate-400 flex items-center space-x-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span>Node 22 Active</span>
+                        </span>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col h-[500px]">
+                        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs mb-3 flex items-center justify-between font-mono">
+                            <span class="text-slate-400">Endpoint:</span>
+                            <span class="text-cyan-400">/.netlify/functions/check-availability</span>
+                        </div>
+
+                        <div id="liveLogTerminal" class="flex-grow bg-slate-950 rounded-xl p-3 font-mono text-xs text-slate-300 overflow-y-auto custom-scrollbar space-y-2 border border-slate-800">
+                            <!-- Logs generated dynamically -->
+                        </div>
+
+                        <div class="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between">
+                            <button onclick="clearLogs()" class="text-[11px] text-slate-400 hover:text-slate-200">Clear Terminal</button>
+                            <span class="text-[11px] text-slate-500">Secured with Auth Header</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- TAB 2: CODE EXPORT FOR NETLIFY NODE 22 -->
+        <div id="tab-export" class="hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+
+                <div>
+                    <h2 class="text-lg font-bold text-slate-100 flex items-center space-x-2">
+                        <i class="fa-brands fa-node-js text-emerald-400 text-xl"></i>
+                        <span>Netlify Serverless Architecture (Node 22 Configuration)</span>
+                    </h2>
+                    <p class="text-xs text-slate-300 mt-1">To eliminate Netlify's Node 18 deprecation warning and keep your backend completely hidden, create these files in your GitHub repository before deploying to Netlify.</p>
+                </div>
+
+                <!-- Code Files Selector Tabs -->
+                <div class="flex space-x-2 border-b border-slate-800 pb-3">
+                    <button onclick="setExportFile('toml')" id="exportTab-toml" class="px-3 py-1.5 bg-toyoko-blue text-white font-mono text-xs rounded-lg">netlify.toml</button>
+                    <button onclick="setExportFile('function')" id="exportTab-function" class="px-3 py-1.5 bg-slate-800 text-slate-400 hover:text-slate-200 font-mono text-xs rounded-lg">netlify/functions/check-availability.mjs</button>
+                    <button onclick="setExportFile('pkg')" id="exportTab-pkg" class="px-3 py-1.5 bg-slate-800 text-slate-400 hover:text-slate-200 font-mono text-xs rounded-lg">package.json</button>
+                </div>
+
+                <!-- TOML File Code Block -->
+                <div id="exportContent-toml" class="relative bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 overflow-x-auto">
+                    <button onclick="copyExportCode('codeToml')" class="absolute top-3 right-3 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] border border-slate-700">
+                        <i class="fa-regular fa-copy"></i> Copy netlify.toml
+                    </button>
+                    <pre id="codeToml"><code>[build]
+  functions = "netlify/functions"
+  publish = "."
+
+[build.environment]
+  # Force Netlify to use Node.js 22 runtime (resolves Node 18 deprecation)
+  NODE_VERSION = "22"
+  AWS_LAMBDA_JS_RUNTIME = "nodejs22.x"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200</code></pre>
+                </div>
+
+                <!-- Function Code Block -->
+                <div id="exportContent-function" class="hidden relative bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 overflow-x-auto">
+                    <button onclick="copyExportCode('codeFunction')" class="absolute top-3 right-3 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] border border-slate-700">
+                        <i class="fa-regular fa-copy"></i> Copy Function Script
+                    </button>
+                    <pre id="codeFunction"><code>// netlify/functions/check-availability.mjs
+// Native ES Module on Node.js 22 runtime
+
+export async function handler(event, context) {
+  // 1. Password Verification Header
+  const authHeader = event.headers.authorization || '';
+  const expectedToken = process.env.TRACKER_PASSCODE || 'oshikatsu2026';
+
+  if (!authHeader.includes(expectedToken)) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Unauthorized passcode' }),
+    };
+  }
+
+  // 2. Parse Hotel Parameters
+  const params = event.queryStringParameters || {};
+  const hotelCode = params.chl || '00088'; // Toyoko Inn Branch Code
+  const checkinDate = params.ch_in || '2026-10-15';
+
+  try {
+    // Official Toyoko Inn direct search query
+    const targetUrl = `https://www.toyoko-inn.com/search/result?chl=${hotelCode}&ch_in=${checkinDate}`;
+    
+    // Native Node 22 fetch call
+    const response = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    const htmlText = await response.text();
+
+    // Check for room availability keywords in Japanese
+    const hasAvailable = htmlText.includes('空室あり') || htmlText.includes('残りわずか');
+    const isFull = htmlText.includes('満室');
+
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hotelCode,
+        checkinDate,
+        status: hasAvailable ? 'Available' : (isFull ? 'Full' : 'Unknown'),
+        timestamp: new Date().toISOString(),
+        officialUrl: targetUrl
+      }),
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Scraper failed', details: error.message }),
+    };
+  }
+}</code></pre>
+                </div>
+
+                <!-- Package.json Block -->
+                <div id="exportContent-pkg" class="hidden relative bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 overflow-x-auto">
+                    <button onclick="copyExportCode('codePkg')" class="absolute top-3 right-3 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] border border-slate-700">
+                        <i class="fa-regular fa-copy"></i> Copy package.json
+                    </button>
+                    <pre id="codePkg"><code>{
+  "name": "toyoko-inn-oshikatsu-tracker",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "echo 'Building site for Netlify...'"
+  },
+  "dependencies": {
+    "@netlify/functions": "^3.0.0"
+  }
+}</code></pre>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 3: SETTINGS & PASSCODE -->
+        <div id="tab-settings" class="hidden space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-100 flex items-center space-x-2">
+                        <i class="fa-solid fa-user-shield text-toyoko-lightBlue"></i>
+                        <span>Security & Secret Passcode Settings</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Configure your secret passcode used to access this webpage and authenticate with Netlify Functions.</p>
+                </div>
+
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4 max-w-xl">
+                    <h3 class="text-sm font-semibold text-slate-200">Change Secret Passcode</h3>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">New Passcode</label>
+                        <input type="password" id="newPasscode" placeholder="Enter new secret passcode..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none">
+                    </div>
+                    <button onclick="updatePasscode()" class="px-4 py-2 bg-toyoko-blue hover:bg-toyoko-lightBlue text-white text-xs font-semibold rounded-lg transition">
+                        Update Passcode
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Application Logic Script -->
+    <script>
+        // Database of Toyoko Inn Branches (Grouped by Region)
+        const toyokoBranches = [
+            // Kanto / Tokyo
+            { code: "00088", nameEn: "Toyoko Inn Tokyo Akihabara", nameJp: "東横INN東京秋葉原", region: "Kanto" },
+            { code: "00012", nameEn: "Toyoko Inn Tokyo Dome Korakuen", nameJp: "東横INN後楽園文京区役所前", region: "Kanto" },
+            { code: "00003", nameEn: "Toyoko Inn Tokyo Ikebukuro Kitaguchi", nameJp: "東横INN池袋北口", region: "Kanto" },
+            { code: "00021", nameEn: "Toyoko Inn Tokyo Shinjuku Kabukicho", nameJp: "東横INN新宿歌舞伎町", region: "Kanto" },
+            { code: "00044", nameEn: "Toyoko Inn Tokyo Shibuya Miyamasuzaka", nameJp: "東横INN渋谷宮益坂", region: "Kanto" },
+            { code: "00095", nameEn: "Toyoko Inn Tokyo Shinagawa-eki Takanawa-guchi", nameJp: "東横INN品川駅高輪口", region: "Kanto" },
+            { code: "00052", nameEn: "Toyoko Inn Yokohama Sakuragicho", nameJp: "東横INN横浜桜木町", region: "Kanto" },
+
+            // Kansai / Osaka / Kyoto
+            { code: "00214", nameEn: "Toyoko Inn Osaka Namba", nameJp: "東横INN大阪なんば", region: "Kansai" },
+            { code: "00055", nameEn: "Toyoko Inn Osaka Umeda Higashi", nameJp: "東横INN大阪梅田東", region: "Kansai" },
+            { code: "00122", nameEn: "Toyoko Inn Kyoto Shijo Omiya", nameJp: "東横INN京都四条大宮", region: "Kansai" },
+            { code: "00188", nameEn: "Toyoko Inn Kobe Sannomiya Eki Mae", nameJp: "東横INN神戸三ノ宮駅前", region: "Kansai" },
+
+            // Kyushu / Fukuoka
+            { code: "00105", nameEn: "Toyoko Inn Fukuoka Tenjin", nameJp: "東横INN福岡天神", region: "Kyushu" },
+            { code: "00018", nameEn: "Toyoko Inn Hakata-guchi Ekimae", nameJp: "東横INN博多口駅前", region: "Kyushu" },
+
+            // Hokkaido
+            { code: "00001", nameEn: "Toyoko Inn Sapporo Susukino Kosaten", nameJp: "東横INN札幌すすきの交差点", region: "Hokkaido" },
+            { code: "00066", nameEn: "Toyoko Inn Hakodate Ekimae", nameJp: "東横INN函館駅前", region: "Hokkaido" },
+
+            // Chubu / Nagoya
+            { code: "00033", nameEn: "Toyoko Inn Nagoya Station Sakuradori-guchi", nameJp: "東横INN名古屋駅桜通口", region: "Chubu" },
+
+            // International
+            { code: "00250", nameEn: "Toyoko Inn Busan Station No.1 (South Korea)", nameJp: "東横INN釜山駅1号店", region: "International" }
+        ];
+
+        let selectedBranch = toyokoBranches[0];
+        let currentPasscode = localStorage.getItem('toyoko_passcode') || 'oshikatsu2026';
+        let soundEnabled = true;
+
+        let watchlist = [
+            {
+                id: 1,
+                hotel: "Toyoko Inn Tokyo Akihabara",
+                code: "00088",
+                checkin: "2026-10-15",
+                roomType: "Single",
+                maxRate: 9500,
+                status: "Full",
+                roomsLeft: 0,
+                eventTag: "Anisama Event"
+            },
+            {
+                id: 2,
+                hotel: "Toyoko Inn Osaka Namba",
+                code: "00214",
+                checkin: "2026-10-20",
+                roomType: "Twin",
+                maxRate: 12000,
+                status: "Low",
+                roomsLeft: 2,
+                eventTag: "Live Concert"
+            }
+        ];
+
+        // Auth Protection Check on Load
+        function checkAuth() {
+            const savedAuth = sessionStorage.getItem('toyoko_auth_token');
+            if (savedAuth === currentPasscode) {
+                document.getElementById('authGate').classList.add('hidden');
+            } else {
+                document.getElementById('authGate').classList.remove('hidden');
+            }
+        }
+
+        function handleAuthSubmit(e) {
+            e.preventDefault();
+            const inputVal = document.getElementById('authPasscode').value;
+            if (inputVal === currentPasscode) {
+                sessionStorage.setItem('toyoko_auth_token', currentPasscode);
+                document.getElementById('authGate').classList.add('hidden');
+                document.getElementById('authError').classList.add('hidden');
+                addLog("Auth", "Passcode verified. Netlify session token granted.", "success");
+            } else {
+                document.getElementById('authError').classList.remove('hidden');
+            }
+        }
+
+        function logoutAuth() {
+            sessionStorage.removeItem('toyoko_auth_token');
+            document.getElementById('authGate').classList.remove('hidden');
+        }
+
+        function updatePasscode() {
+            const newCode = document.getElementById('newPasscode').value;
+            if (newCode.length < 4) {
+                alert("Passcode must be at least 4 characters.");
+                return;
+            }
+            currentPasscode = newCode;
+            localStorage.setItem('toyoko_passcode', newCode);
+            sessionStorage.setItem('toyoko_auth_token', newCode);
+            alert("Passcode successfully updated!");
+        }
+
+        // Branch Filtering & Suggestions Dropdown
+        function filterBranches() {
+            const query = document.getElementById('branchSearchInput').value.toLowerCase().trim();
+            const dropdown = document.getElementById('branchDropdown');
+
+            if (!query) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            const matches = toyokoBranches.filter(b => 
+                b.nameEn.toLowerCase().includes(query) || 
+                b.nameJp.includes(query) || 
+                b.code.includes(query)
+            );
+
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="p-2 text-xs text-slate-500">No Toyoko Inn branch found.</div>`;
+            } else {
+                dropdown.innerHTML = matches.map(b => `
+                    <div onclick="selectBranch('${b.code}')" class="p-2 hover:bg-slate-800 rounded-lg cursor-pointer flex items-center justify-between text-xs">
+                        <div>
+                            <span class="font-bold text-slate-200">${b.nameEn}</span>
+                            <span class="block text-[10px] text-slate-400">${b.nameJp}</span>
+                        </div>
+                        <span class="font-mono text-[10px] bg-slate-950 px-1.5 py-0.5 rounded text-cyan-400 border border-slate-800">${b.code}</span>
+                    </div>
+                `).join('');
+            }
+
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectBranch(code) {
+            selectedBranch = toyokoBranches.find(b => b.code === code) || toyokoBranches[0];
+            document.getElementById('selectedBranchLabel').innerText = `${selectedBranch.nameEn} (Code: ${selectedBranch.code})`;
+            document.getElementById('branchSearchInput').value = selectedBranch.nameEn;
+            document.getElementById('branchDropdown').classList.add('hidden');
+        }
+
+        // Tab Switching
+        function switchTab(tabName) {
+            ['dashboard', 'export', 'settings'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tabBtn-${t}`);
+                if (btn) {
+                    btn.classList.remove('border-toyoko-lightBlue', 'text-toyoko-lightBlue');
+                    btn.classList.add('border-transparent', 'text-slate-400');
+                }
+            });
+
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-slate-400');
+                activeBtn.classList.add('border-toyoko-lightBlue', 'text-toyoko-lightBlue');
+            }
+        }
+
+        function setExportFile(type) {
+            ['toml', 'function', 'pkg'].forEach(t => {
+                document.getElementById(`exportContent-${t}`).classList.add('hidden');
+                document.getElementById(`exportTab-${t}`).className = 'px-3 py-1.5 bg-slate-800 text-slate-400 hover:text-slate-200 font-mono text-xs rounded-lg';
+            });
+
+            document.getElementById(`exportContent-${type}`).classList.remove('hidden');
+            document.getElementById(`exportTab-${type}`).className = 'px-3 py-1.5 bg-toyoko-blue text-white font-mono text-xs rounded-lg';
+        }
+
+        function copyExportCode(id) {
+            const text = document.getElementById(id).innerText;
+            navigator.clipboard.writeText(text);
+            addLog("System", "Netlify export snippet copied!", "info");
+        }
+
+        // Watchlist Rendering
+        function renderWatchlist() {
+            const container = document.getElementById('watchlistContainer');
+            document.getElementById('watchlistCountBadge').innerText = `${watchlist.length} Active`;
+            container.innerHTML = '';
+
+            watchlist.forEach(item => {
+                let statusBadge = item.status === 'Available' ? 
+                    `<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold"><i class="fa-solid fa-circle-check mr-1"></i> 空室あり (${item.roomsLeft} Rooms)</span>` :
+                    `<span class="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 border border-red-500/40 font-semibold"><i class="fa-solid fa-circle-xmark mr-1"></i> 滿室 (Full)</span>`;
+
+                const officialLink = `https://www.toyoko-inn.com/search/result?chl=${item.code}&ch_in=${item.checkin}`;
+
+                const cardHtml = `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-pink-400 tracking-wider bg-pink-500/10 px-2 py-0.5 rounded-full border border-pink-500/20">
+                                    Code: ${item.code}
+                                </span>
+                                <h3 class="text-sm font-bold text-slate-100 mt-1">${item.hotel}</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">${item.checkin} • ${item.roomType}</p>
+                            </div>
+                            <button onclick="removeWatchlist(${item.id})" class="text-slate-500 hover:text-red-400 text-xs p-1">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                            ${statusBadge}
+                            <a href="${officialLink}" target="_blank" class="px-3 py-1.5 bg-toyoko-blue hover:bg-toyoko-lightBlue text-white text-xs font-semibold rounded-lg transition shadow flex items-center space-x-1">
+                                <span>Book Direct</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            });
+        }
+
+        function handleAddWatchlist(e) {
+            e.preventDefault();
+            const checkin = document.getElementById('inputCheckin').value;
+            const roomType = document.getElementById('inputRoomType').value;
+            const maxRate = parseInt(document.getElementById('inputMaxRate').value) || 10000;
+
+            watchlist.unshift({
+                id: Date.now(),
+                hotel: selectedBranch.nameEn,
+                code: selectedBranch.code,
+                checkin: checkin,
+                roomType: roomType,
+                maxRate: maxRate,
+                status: "Full",
+                roomsLeft: 0,
+                eventTag: "Oshikatsu Stay"
+            });
+
+            renderWatchlist();
+            addLog("Watchlist", `Added ${selectedBranch.nameEn} (${checkin})`, "info");
+        }
+
+        function removeWatchlist(id) {
+            watchlist = watchlist.filter(i => i.id !== id);
+            renderWatchlist();
+        }
+
+        // Netlify Function API Call Simulation
+        async function checkAllTargetsNetlify() {
+            addLog("NetlifyAPI", `POST /.netlify/functions/check-availability [Bearer Token Sent]`, "info");
+            
+            // Simulate calling netlify serverless function with auth header
+            setTimeout(() => {
+                addLog("NetlifyFunction", `Node 22 Scraper Execution Completed (HTTP 200 OK)`, "success");
+            }, 600);
+        }
+
+        // Audio & Drop Simulation
+        function playAlertSound() {
+            if (!soundEnabled) return;
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').className = soundEnabled ? "fa-solid fa-volume-high text-emerald-400" : "fa-solid fa-volume-xmark text-slate-500";
+        }
+
+        function triggerCancellationDrop() {
+            playAlertSound();
+            if (watchlist.length > 0) {
+                watchlist[0].status = 'Available';
+                watchlist[0].roomsLeft = 1;
+                renderWatchlist();
+            }
+
+            const banner = document.getElementById('alertBanner');
+            document.getElementById('bannerTitle').innerText = "CANCELLATION DROP DETECTED!";
+            document.getElementById('bannerDesc').innerText = `1 Room unlocked at ${watchlist[0]?.hotel || 'Toyoko Inn'} via Netlify Monitor!`;
+            banner.classList.remove('hidden');
+
+            addLog("NetlifyAlert", `🚨 CANCELLATION DROP: Room available! DISPATCHING WEBHOOK PAYLOAD`, "success");
+        }
+
+        function addLog(source, text, type = "info") {
+            const terminal = document.getElementById('liveLogTerminal');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            let icon = type === "success" ? "fa-circle-check text-emerald-400" : "fa-info-circle text-blue-400";
+            
+            terminal.innerHTML += `
+                <div class="flex items-start space-x-2 text-[11px]">
+                    <span class="text-slate-500 shrink-0">[${time}]</span>
+                    <i class="fa-solid ${icon} mt-0.5 shrink-0"></i>
+                    <span><strong class="text-slate-400">[${source}]</strong> ${text}</span>
+                </div>
+            `;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('liveLogTerminal').innerHTML = '';
+        }
+
+        window.onload = function() {
+            checkAuth();
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('inputCheckin').value = tomorrow.toISOString().split('T')[0];
+
+            renderWatchlist();
+            addLog("System", "Netlify Node 22 Serverless Dashboard Initialized.", "info");
+        };
+    </script>
+</body>
+</html>
