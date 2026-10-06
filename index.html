@@ -53,9 +53,9 @@
           </div>
           <div>
             <h1 class="font-bold text-lg text-white leading-tight flex items-center gap-2">
-              Toyoko Inn Room Tracker <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Direct API Fix</span>
+              Toyoko Inn Room Tracker <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Secure Environment Mode</span>
             </h1>
-            <p class="text-xs text-gray-400">Real-time Direct JSON Engine • Live Availability Tracking</p>
+            <p class="text-xs text-gray-400">Direct Internal JSON API • Resend Alert via Netlify Env</p>
           </div>
         </div>
 
@@ -77,6 +77,27 @@
     <!-- CONTENT BODY -->
     <main class="max-w-7xl mx-auto w-full p-4 md:p-6 space-y-6 flex-1">
       
+      <!-- EMAIL NOTIFICATION SETTINGS BANNER -->
+      <div class="glass-card p-4 rounded-2xl border border-indigo-500/30 bg-indigo-950/20 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 shrink-0">
+            <i class="fa-regular fa-envelope text-lg"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-white">Resend Email Alerts Enabled</h3>
+            <p class="text-xs text-gray-400">API key configured securely via Netlify environment variable (<code>RESEND_API_KEY</code>).</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <input type="email" id="userEmailInput" placeholder="Enter your notification email..." 
+                 class="px-3 py-1.5 rounded-xl glass-input text-xs w-full md:w-64" value="">
+          <button id="testEmailBtn" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-xl transition shrink-0 flex items-center gap-1">
+            <i class="fa-solid fa-paper-plane"></i> Send Test Email
+          </button>
+        </div>
+      </div>
+
       <!-- ADD WATCH ITEM & BRANCH SELECTION -->
       <div class="glass-card p-5 rounded-2xl border border-gray-800">
         <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
@@ -147,10 +168,10 @@
           <h3 class="text-xs font-bold text-gray-300 tracking-wider uppercase flex items-center gap-2">
             <i class="fa-solid fa-terminal text-green-400"></i> Direct API Query Log & Signal Feed
           </h3>
-          <span class="text-[10px] text-gray-500 font-mono">Bypassing CDN Edge Cache</span>
+          <span class="text-[10px] text-gray-500 font-mono">Netlify Function Endpoint Active</span>
         </div>
         <div id="activityLog" class="h-32 overflow-y-auto font-mono text-xs text-gray-400 bg-gray-950/80 p-3 rounded-xl border border-gray-800 space-y-1 custom-scrollbar">
-          <div class="text-gray-500">[System] Initialized direct JSON API inspection engine.</div>
+          <div class="text-gray-500">[System] Direct JSON API engine initialized. Resend API key handled via process.env.RESEND_API_KEY on serverless backend.</div>
         </div>
       </div>
 
@@ -158,7 +179,7 @@
 
     <!-- FOOTER -->
     <footer class="border-t border-gray-800 bg-gray-900/50 py-4 px-6 text-center text-xs text-gray-500">
-      Toyoko Inn Oshikatsu Availability Tracker • Configured for Direct API Querying on Netlify (Node 22 Runtime)
+      Toyoko Inn Oshikatsu Availability Tracker • Secure Netlify Function Architecture
     </footer>
 
   </div>
@@ -168,7 +189,7 @@
     <div class="glass-card max-w-3xl w-full p-6 rounded-2xl border border-gray-800 flex flex-col max-h-[85vh]">
       <div class="flex items-center justify-between pb-4 border-b border-gray-800">
         <h3 class="font-bold text-white text-base flex items-center gap-2">
-          <i class="fa-solid fa-file-code text-indigo-400"></i> Netlify Direct API Backend Files (Node 22)
+          <i class="fa-solid fa-file-code text-indigo-400"></i> Netlify Backend Code (Node 22 + Secure Env)
         </h3>
         <button id="closeExportBtn" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
@@ -176,7 +197,7 @@
       <div class="py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar pr-1">
         
         <div>
-          <label class="text-xs font-semibold text-gray-300 block mb-1">1. netlify.toml (Deploy Configuration)</label>
+          <label class="text-xs font-semibold text-gray-300 block mb-1">1. netlify.toml</label>
           <pre class="bg-gray-950 p-3 rounded-xl text-xs font-mono text-green-400 border border-gray-800 select-all">
 [build]
   functions = "netlify/functions"
@@ -187,22 +208,49 @@
         </div>
 
         <div>
-          <label class="text-xs font-semibold text-gray-300 block mb-1">2. .node-version (Overrides Netlify UI defaults)</label>
+          <label class="text-xs font-semibold text-gray-300 block mb-1">2. .node-version</label>
           <pre class="bg-gray-950 p-3 rounded-xl text-xs font-mono text-green-400 border border-gray-800 select-all">22</pre>
         </div>
 
         <div>
-          <label class="text-xs font-semibold text-gray-300 block mb-1">3. netlify/functions/check-availability.mjs (Direct Internal API Scraper)</label>
+          <label class="text-xs font-semibold text-gray-300 block mb-1">3. netlify/functions/check-availability.mjs (Secure Function Reading process.env.RESEND_API_KEY)</label>
           <pre class="bg-gray-950 p-3 rounded-xl text-xs font-mono text-blue-300 border border-gray-800 overflow-x-auto select-all">
 export async function handler(event, context) {
-  const { hotel, start, end, room = 1, people = 1, smoking = 'noSmoking' } = event.queryStringParameters || {};
+  const { hotel, start, end, room = 1, people = 1, smoking = 'noSmoking', recipientEmail, isTest } = event.queryStringParameters || {};
+
+  // READ RESEND API KEY FROM NETLIFY ENVIRONMENT VARIABLE
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+
+  if (isTest === "true") {
+    if (!RESEND_API_KEY) {
+      return { statusCode: 500, body: JSON.stringify({ error: "RESEND_API_KEY environment variable not set on Netlify" }) };
+    }
+    try {
+      const emailRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Toyoko Inn Alert <onboarding@resend.dev>',
+          to: [recipientEmail],
+          subject: '✅ Resend Test Email - Toyoko Inn Room Monitor',
+          html: '<h2>Resend Integration Active!</h2><p>Your serverless function successfully sent this test email using your Netlify RESEND_API_KEY environment variable.</p>'
+        })
+      });
+      const data = await emailRes.json();
+      return { statusCode: emailRes.ok ? 200 : 400, body: JSON.stringify(data) };
+    } catch (err) {
+      return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    }
+  }
 
   if (!hotel || !start || !end) {
     return { statusCode: 400, body: JSON.stringify({ error: "Missing parameters" }) };
   }
 
   try {
-    // Queries Toyoko Inn's internal JSON endpoint directly, avoiding HTML shell caches
     const apiUrl = `https://www.toyoko-inn.com/api/v1/search/room_plans?hotel=${hotel}&start=${start}&end=${end}&people=${people}&room=${room}&smoking=${smoking}`;
 
     const response = await fetch(apiUrl, {
@@ -221,12 +269,41 @@ export async function handler(event, context) {
     const availablePlans = data.room_plans || data.plans || [];
     const isAvailable = availablePlans.length > 0 && availablePlans.some(p => p.vacant_count > 0 || p.is_bookable);
 
+    // Compute Checkout End Date
+    const startDateObj = new Date(start);
+    const endDateObj = new Date(startDateObj);
+    endDateObj.setDate(startDateObj.getDate() + 1);
+    const endDateStr = endDateObj.toISOString().split("T")[0];
+    const bookingUrl = `https://www.toyoko-inn.com/search/result/room_plan/?hotel=${hotel}&start=${start}&end=${endDateStr}&room=${room}&people=${people}&smoking=${smoking}&tab=roomType&sort=recommend`;
+
+    // TRIGGER EMAIL ALERT VIA NETLIFY FUNCTION IF AVAILABLE
+    if (isAvailable && recipientEmail && RESEND_API_KEY) {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Toyoko Inn Alert <onboarding@resend.dev>',
+          to: [recipientEmail],
+          subject: `🚨 Room Available: Toyoko Inn (${hotel}) on ${start}`,
+          html: `
+            <h2>Toyoko Inn Cancellation Drop Detected!</h2>
+            <p>A room is currently open for booking:</p>
+            <ul>
+              <li><strong>Hotel ID:</strong> ${hotel}</li>
+              <li><strong>Check-in:</strong> ${start}</li>
+            </ul>
+            <p><a href="${bookingUrl}" style="background: #2563eb; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Book Room Immediately</a></p>
+          `
+        })
+      });
+    }
+
     return {
       statusCode: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, max-age=0' 
-      },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' },
       body: JSON.stringify({
         hotel, start, end,
         available: isAvailable,
@@ -394,6 +471,32 @@ export async function handler(event, context) {
         checkAllAvailability();
       });
 
+      // TEST EMAIL TRIGGER (Calls Netlify serverless endpoint safely)
+      document.getElementById("testEmailBtn").addEventListener("click", async () => {
+        const email = document.getElementById("userEmailInput").value.trim();
+        if (!email) {
+          alert("Please enter a target email address first.");
+          return;
+        }
+
+        logActivity(`[Resend Email] Triggering test dispatch via Netlify Function to ${email}...`);
+
+        try {
+          const res = await fetch(`/.netlify/functions/check-availability?isTest=true&recipientEmail=${encodeURIComponent(email)}`);
+          if (res.ok) {
+            logActivity(`[Resend Email] Test email successfully dispatched via Netlify Function!`);
+            alert("Test email sent via Netlify serverless function! Check your inbox.");
+          } else {
+            const errData = await res.json();
+            logActivity(`[Resend Error] ${errData.error || 'Check RESEND_API_KEY on Netlify'}`);
+            alert(`Netlify Function Error: ${errData.error || 'Failed to send test email. Ensure RESEND_API_KEY is set in Netlify settings.'}`);
+          }
+        } catch (err) {
+          logActivity(`[Netlify Function Error] ${err.message}`);
+          alert("Could not reach Netlify Function endpoint. Make sure you deploy to Netlify first.");
+        }
+      });
+
       // Simulate Cancellation Drop
       document.getElementById("simCancellationBtn").addEventListener("click", () => {
         if (watchlist.length > 0) {
@@ -402,7 +505,13 @@ export async function handler(event, context) {
           target.lastChecked = "Just now (API Hit)";
           renderWatchlist();
           playDropSound();
+
+          const email = document.getElementById("userEmailInput").value.trim();
           logActivity(`⚡ CANCELLATION DETECTED via API: Room opened up at ${target.hotelName}!`);
+
+          if (email) {
+            logActivity(`[Resend Dispatch] Triggering cancellation drop email to ${email}...`);
+          }
         }
       });
 
